@@ -1,25 +1,22 @@
-import logging
+from multiprocessing.pool import ThreadPool
 import threading
 import time
+import random
 
-def thread_function(name):
-    logging.info("Thread %s: starting", name)
-    time.sleep(2)
-    logging.info("Thread %s: finishing", name)
+MAX_THREADS = 10
+print_lock = threading.Lock()
+
+def thread_function(num):
+    with print_lock:
+        print("Processed %i", num)
 
 if __name__ == "__main__":
-    format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO,
-                        datefmt="%H:%M:%S")
+    pool = ThreadPool(processes=MAX_THREADS)
+    results = []
+    lst = [i for i in range(25)]
+    while lst:
+        num = lst.pop()
+        results.append(pool.apply_async(thread_function, (num, )))
 
-    threads = list()
-    for index in range(3):
-        logging.info("Main    : create and start thread %d.", index)
-        x = threading.Thread(target=thread_function, args=(index,))
-        threads.append(x)
-        x.start()
-
-    for index, thread in enumerate(threads):
-        logging.info("Main    : before joining thread %d.", index)
-        thread.join()
-        logging.info("Main    : thread %d done", index)
+    pool.close() # Stop adding tasks to pool
+    pool.join()  # Wait for all tasks to complete
