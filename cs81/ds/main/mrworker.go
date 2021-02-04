@@ -1,20 +1,18 @@
 package main
 
 //
-// start a worker process, which is implemented
-// in ../mr/worker.go. typically there will be
-// multiple worker processes, talking to one master.
+// Start a worker process, which is implemented in ../mr/worker.go. 
+// Typically there will be multiple worker processes, talking to one master.
 //
 // go run mrworker.go wc.so
 //
-// Please do not change this file.
-//
-
-import "cs81/ds/mr"
-import "plugin"
-import "os"
-import "fmt"
-import "log"
+import (
+    "cs81/ds/mr"
+    "plugin"
+    "os"
+    "fmt"
+    "log"
+)
 
 func main() {
 	if len(os.Args) != 2 {
@@ -23,13 +21,12 @@ func main() {
 	}
 
 	mapf, reducef := loadPlugin(os.Args[1])
-
 	mr.Worker(mapf, reducef)
 }
 
 //
-// load the application Map and Reduce functions
-// from a plugin file, e.g. ../mrapps/wc.so
+// Load the application Map and Reduce functions from a plugin file, 
+// e.g. ../mrapps/wc.so
 //
 func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(string, []string) string) {
 	p, err := plugin.Open(filename)

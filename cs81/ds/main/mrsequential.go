@@ -1,23 +1,24 @@
 package main
 
 //
-// simple sequential MapReduce.
-//
+// Simple sequential MapReduce.
 // go run mrsequential.go wc.so pg*.txt
 //
 
-import "fmt"
-import "cs81/ds/mr"
-import "plugin"
-import "os"
-import "log"
-import "io/ioutil"
-import "sort"
+import (
+    "fmt"
+    "cs81/ds/mr"
+    "plugin"
+    "os"
+    "log"
+    "io/ioutil"
+    "sort"
+)
 
-// for sorting by key.
+// For sorting by key.
 type ByKey []mr.KeyValue
 
-// for sorting by key.
+// For sorting by key.
 func (a ByKey) Len() int           { return len(a) }
 func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
@@ -31,9 +32,9 @@ func main() {
 	mapf, reducef := loadPlugin(os.Args[1])
 
 	//
-	// read each input file,
-	// pass it to Map,
-	// accumulate the intermediate Map output.
+	// Read each input file
+	// Pass it to Map
+	// Accumulate the intermediate Map output
 	//
 	intermediate := []mr.KeyValue{}
 	for _, filename := range os.Args[2:] {
@@ -51,20 +52,18 @@ func main() {
 	}
 
 	//
-	// a big difference from real MapReduce is that all the
-	// intermediate data is in one place, intermediate[],
-	// rather than being partitioned into NxM buckets.
-	//
-
+    // All intermediate data here is in one place, intermediate[] rather 
+    // than being partitioned into NxM buckets.
+    //
 	sort.Sort(ByKey(intermediate))
 
 	oname := "mr-out-0"
 	ofile, _ := os.Create(oname)
 
 	//
-	// call Reduce on each distinct key in intermediate[],
-	// and print the result to mr-out-0.
-	//
+	// Call Reduce on each distinct key in intermediate[], and print the 
+    // result to mr-out-0.
+    //
 	i := 0
 	for i < len(intermediate) {
 		j := i + 1
@@ -77,7 +76,7 @@ func main() {
 		}
 		output := reducef(intermediate[i].Key, values)
 
-		// this is the correct format for each line of Reduce output.
+		// Correct format for each line of Reduce output.
 		fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
 
 		i = j
@@ -87,8 +86,8 @@ func main() {
 }
 
 //
-// load the application Map and Reduce functions
-// from a plugin file, e.g. ../mrapps/wc.so
+// Load the application Map and Reduce functions from a plugin file, 
+// e.g. ../mrapps/wc.so
 //
 func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(string, []string) string) {
 	p, err := plugin.Open(filename)
