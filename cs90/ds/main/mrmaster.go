@@ -20,7 +20,6 @@ func main() {
 
 	m := mr.MakeMaster(os.Args[1:], 10)
 	for m.Done() == false {
-        fmt.Printf("inside for loop")
 		time.Sleep(time.Second)
 	}
 
