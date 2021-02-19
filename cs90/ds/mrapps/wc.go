@@ -6,7 +6,7 @@ package main
 // go build -buildmode=plugin wc.go
 //
 
-import "cs81/ds/mr"
+import "cs90/ds/mr"
 import "unicode"
 import "strings"
 import "strconv"

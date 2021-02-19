@@ -7,7 +7,7 @@ package main
 // go build -buildmode=plugin rtiming.go
 //
 
-import "g.csail.mit.edu/6.824/mr"
+import "cs90/ds/mr"
 import "fmt"
 import "os"
 import "syscall"

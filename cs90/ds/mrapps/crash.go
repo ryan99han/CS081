@@ -8,7 +8,7 @@ package main
 // go build -buildmode=plugin crash.go
 //
 
-import "g.csail.mit.edu/6.824/mr"
+import "cs90/ds/mr"
 import crand "crypto/rand"
 import "math/big"
 import "strings"

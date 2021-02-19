@@ -7,6 +7,8 @@ package mr
 import "os"
 import "strconv"
 
+var Port = ":1234"
+
 type RegisterArgs struct {
 }
 
@@ -19,7 +21,22 @@ type GetTaskArgs struct {
 }
 
 type GetTaskReply struct {
+	IsMapTask		bool
+	IsWaiting		bool
+	IsDone			bool
+
 	Filename		string
+	MapIndex		int
+	ReduceIndex		int
+	NMap			int
+	NReduce			int
+}
+
+type FinishTaskArgs struct {
+	IsMapTask		bool
+}
+
+type FinishTaskReply struct {
 }
 
 // Cook up a unique-ish UNIX-domain socket name
