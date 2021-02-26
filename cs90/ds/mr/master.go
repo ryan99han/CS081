@@ -10,17 +10,17 @@ import (
 )
 
 type Master struct {
-	Mutex                   sync.Mutex
-    numWorkers              int
+    mutex           		sync.Mutex
+    numWorkers      		int
     files           		[]string
-    isDone 					bool
+    isDone 			bool
 
-    mapIndex				int
-    reduceIndex				int
+    mapIndex			int
+    reduceIndex			int
     mapTasksFinished 		int
     reduceTasksFinished 	int
-    nMap					int
-    nReduce					int
+    nMap			int
+    nReduce			int
 }
 
 func (m *Master) RegisterCall(args *RegisterArgs, reply *RegisterReply) error {

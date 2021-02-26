@@ -40,9 +40,8 @@ func Worker(
     mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string,
 ) {
-
-	w := worker{}
-	w.createWorker(mapf, reducef)
+    w := worker{}
+    w.createWorker(mapf, reducef)
     w.runWorker()	
 }
 
@@ -50,11 +49,10 @@ func (w *worker) createWorker(
     mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string,
 ) {
+    w.mapf    = mapf
+    w.reducef = reducef
 
-	w.mapf    = mapf
-	w.reducef = reducef
-
-	args := RegisterArgs{}
+    args := RegisterArgs{}
     reply := RegisterReply{}
 
     success := call("Master.RegisterCall", &args, &reply)
@@ -132,15 +130,12 @@ func (w *worker) mapTask(reply GetTaskReply) {
             if err != nil {
                 // print msg
             }
-
         }
-
         err2 := f.Close()
         if err2 != nil {
             // print msg
         }
     }
-
 
     finishArgs := FinishTaskArgs{}
     finishReply := FinishTaskReply{}
