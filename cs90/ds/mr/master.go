@@ -10,8 +10,8 @@ import (
 )
 
 type Master struct {
-	mutex           		sync.Mutex
-    numWorkers      		int
+	Mutex                   sync.Mutex
+    numWorkers              int
     files           		[]string
     isDone 					bool
 
