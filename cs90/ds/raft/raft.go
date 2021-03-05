@@ -37,6 +37,7 @@ const (
 
 const (
 	ElectionTimeout = time.Millisecond * 400
+	Heartbeat = time.Millisecond * 100
 )
 
 //
@@ -69,10 +70,10 @@ type Raft struct {
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
-	role 	  Role
-	term 	  int
-	votedFor   int
-	electionTimer *time.Timer
+	role 	      Role
+	term 	      int
+	votedFor      int
+	lastEntryTime time.Time
 }
 
 // return currentTerm and whether this server
@@ -126,12 +127,6 @@ func (rf *Raft) readPersist(data []byte) {
 }
 
 
-
-
-//
-// example RequestVote RPC arguments structure.
-// field names must start with capital letters!
-//
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
 	Term         int
@@ -140,20 +135,63 @@ type RequestVoteArgs struct {
 	LastLogTerm  int
 }
 
-//
-// example RequestVote RPC reply structure.
-// field names must start with capital letters!
-//
 type RequestVoteReply struct {
 	// Your data here (2A).
 	Term 			int
 	VoteGranted		bool
 }
 
+type AppendEntryArgs struct {
+	Term         int
+	LeaderId     int
+	PrevLogIndex int
+	PrevLogTerm  int
+	// Entries      [] log
+	LeaderCommit int 
+}
+
+type AppendEntryReply struct {
+	Term 	     int
+	Success		 bool
+}
+
+func (rf *Raft) SendAppendEntries() {
+	// log.Printf("[%d] sending append entries at term %d", rf.me, rf.term)
+	for server, _ := range rf.peers {
+		if server == rf.me {
+			continue
+		}
+		go func(server int) {
+			// log.Printf("[%d] sending append entry to %d", rf.me, server)
+
+			var args AppendEntryArgs
+			var reply AppendEntryReply
+
+			ok := rf.peers[server].Call("Raft.AppendEntry", &args, &reply)
+			// log.Printf("[%d] finished sending append entry to %d", rf.me, server)
+			if !ok {
+				// return false
+			}
+			// return true
+
+		} (server)
+	}
+}
+
+func (rf *Raft) AppendEntry(args *AppendEntryArgs, reply *AppendEntryReply) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	rf.lastEntryTime = time.Now()
+	rf.role = Follower
+	return
+}
+
+
+
 func (rf *Raft) AttemptElection() {
 	rf.mu.Lock()
+	rf.term += 1
 	rf.role = Candidate 
-	rf.term++
 	rf.votedFor = rf.me
 	
 	term := rf.term
@@ -176,8 +214,8 @@ func (rf *Raft) AttemptElection() {
 			rf.mu.Lock()
 			defer rf.mu.Unlock()
 
-			votes++
-			log.Printf("[%d] got vote from %d", rf.me, server)
+			votes += 1
+			log.Printf("[%d] got vote from %d for term %d", rf.me, server, term)
 			if done || votes <= len(rf.peers)/2 {
 				return
 			}
@@ -196,17 +234,18 @@ func (rf *Raft) AttemptElection() {
 
 func (rf *Raft) CallRequestVote(server int, term int) bool {
 	log.Printf("[%d] sending request vote to %d", rf.me, server)
+
 	args := RequestVoteArgs {
 		Term: term,
 		CandidateId: rf.me,
 	}
 	var reply RequestVoteReply
+
 	ok := rf.sendRequestVote(server, &args, &reply)
-	log.Printf("[%d] finished sending request vote to %d", rf.me, server)
+	// log.Printf("[%d] finished sending request vote to %d", rf.me, server)
 	if !ok {
 		return false
 	}
-	// PROCESS REPLY
 	return true
 }
 
@@ -226,8 +265,10 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if args.Term < rf.term {
 		return
 	} else if args.Term > rf.term {
-		rf.term = args.Term
-		rf.votedFor = -1
+		// log.Printf("[%d] %d greater than %d with role %d", rf.me, args.Term, rf.term, rf.role)
+		// rf.term = args.Term
+		// rf.votedFor = -1
+		// do something here???
 	} else {
 		if rf.role == Leader {
 			return
@@ -243,8 +284,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.term = args.Term
 	rf.votedFor = args.CandidateId	
 	rf.role = Follower
+	// log.Printf("[%d] processing request vote to %d", rf.me, rf.votedFor)
 
-	time.Sleep(ElectionTimeout + time.Duration(rand.Int63()) % ElectionTimeout)
+	// time.Sleep(ElectionTimeout + time.Duration(rand.Int63()) % ElectionTimeout)
 	// log.Printf("[%d] sending request vote to %d", rf.me, rf.votedFor)
 
 	return
@@ -351,8 +393,50 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.persister = persister
 	rf.me = me
 
+	rf.term = 0
+	rf.votedFor = -1
+	rf.role = Follower
+	rf.lastEntryTime = time.Now()
+	// rf.lastEntryTime = time.Now() - (ElectionTimeout + time.Duration(rand.Int63()) % ElectionTimeout)
+
 	// Your initialization code here (2A, 2B, 2C).
-	rf.AttemptElection()
+
+	go func() {
+		for {
+			if rf.killed() {
+				return
+			}
+
+			if _, isLeader := rf.GetState(); isLeader == true {
+				continue
+			}
+
+			rf.mu.Lock()
+			t := time.Now()
+			elapsed := t.Sub(rf.lastEntryTime)
+			rf.mu.Unlock()
+
+			if elapsed > time.Duration(ElectionTimeout) {
+				rf.AttemptElection()
+			}
+			time.Sleep(ElectionTimeout + time.Duration(rand.Int63()) % ElectionTimeout)
+		}
+	}()
+
+	go func() {
+		for {
+			if rf.killed() {
+				return
+			}
+
+			if _, isLeader := rf.GetState(); isLeader == true {
+				rf.SendAppendEntries()
+				time.Sleep(Heartbeat)
+			}
+		}
+		
+	}()
+	
 	
 
 	// initialize from state persisted before a crash
